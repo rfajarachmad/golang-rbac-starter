@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go mod:*)",
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(migrate -path db/migrations -database \"postgres://carevol:carevol_dev@localhost:5433/go?sslmode=disable\" drop -f)",
+      "Bash(migrate -path db/migrations -database \"postgres://carevol:carevol_dev@localhost:5433/go?sslmode=disable\" up)",
+      "Bash(golangci-lint --version)",
+      "Bash(go install:*)",
+      "WebFetch(domain:medium.com)",
+      "Bash(go vet:*)",
+      "Bash(golangci-lint run:*)",
+      "Bash(gofmt:*)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(git checkout:*)"
+    ]
+  }
+}

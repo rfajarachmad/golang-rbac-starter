@@ -1,0 +1,6 @@
+.env
+bin/
+tmp/
+coverage.out
+web
+settings.local.json

@@ -1,0 +1,56 @@
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - bodyclose
+    - goconst
+    - gocritic
+    - gofmt
+    - goimports
+    - gosec
+    - misspell
+    - prealloc
+    - revive
+    - unconvert
+    - unparam
+    - whitespace
+
+linters-settings:
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+  gosec:
+    excludes:
+      - G101 # hardcoded credentials (false positives on token field names)
+  revive:
+    rules:
+      - name: exported
+        disabled: true
+
+issues:
+  exclude-dirs:
+    - tmp
+    - bin
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec
+        - goconst
+        - unparam
+        - bodyclose
+    - path: _test\.go
+      text: "httpNoBody"
+      linters:
+        - gocritic
