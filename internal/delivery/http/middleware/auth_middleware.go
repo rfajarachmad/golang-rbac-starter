@@ -3,6 +3,7 @@ package middleware
 import (
 	"go-rbac-starter/internal/model"
 	"go-rbac-starter/internal/usecase"
+	"slices"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -26,4 +27,24 @@ func NewAuth(userUseCase *usecase.UserUseCase) fiber.Handler {
 
 func GetUser(ctx *fiber.Ctx) *model.Auth {
 	return ctx.Locals("auth").(*model.Auth)
+}
+
+func RequirePermission(permission string) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		auth := GetUser(ctx)
+		if slices.Contains(auth.Permissions, permission) {
+			return ctx.Next()
+		}
+		return fiber.ErrForbidden
+	}
+}
+
+func RequireRole(role string) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		auth := GetUser(ctx)
+		if auth.RoleName == role {
+			return ctx.Next()
+		}
+		return fiber.ErrForbidden
+	}
 }

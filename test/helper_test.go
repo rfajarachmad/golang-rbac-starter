@@ -36,7 +36,19 @@ func ClearAddresses() {
 	}
 }
 
+func getRoleId(roleName string) int {
+	role := new(entity.Role)
+	if err := db.Where("name = ?", roleName).First(role).Error; err != nil {
+		log.Fatalf("Failed find role %s : %+v", roleName, err)
+	}
+	return role.ID
+}
+
 func SeedUser(t *testing.T, name, email, password string) *entity.User {
+	return SeedUserWithRole(t, name, email, password, "user")
+}
+
+func SeedUserWithRole(t *testing.T, name, email, password, roleName string) *entity.User {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	assert.Nil(t, err)
 
@@ -45,6 +57,7 @@ func SeedUser(t *testing.T, name, email, password string) *entity.User {
 		Email:    email,
 		Password: string(hashedPassword),
 		Token:    uuid.New().String(),
+		RoleId:   getRoleId(roleName),
 	}
 	err = db.Create(user).Error
 	assert.Nil(t, err)

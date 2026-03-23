@@ -27,16 +27,19 @@ func Bootstrap(config *BootstrapConfig) {
 	userRepository := repository.NewUserRepository(config.Log)
 	contactRepository := repository.NewContactRepository(config.Log)
 	addressRepository := repository.NewAddressRepository(config.Log)
+	roleRepository := repository.NewRoleRepository(config.Log)
 
 	// setup use cases
-	userUseCase := usecase.NewUserUseCase(config.DB, config.Log, config.Validate, userRepository)
+	userUseCase := usecase.NewUserUseCase(config.DB, config.Log, config.Validate, userRepository, roleRepository)
 	contactUseCase := usecase.NewContactUseCase(config.DB, config.Log, config.Validate, contactRepository)
 	addressUseCase := usecase.NewAddressUseCase(config.DB, config.Log, config.Validate, contactRepository, addressRepository)
+	roleUseCase := usecase.NewRoleUseCase(config.DB, config.Log, roleRepository)
 
 	// setup controller
 	userController := http.NewUserController(userUseCase, config.Log)
 	contactController := http.NewContactController(contactUseCase, config.Log)
 	addressController := http.NewAddressController(addressUseCase, config.Log)
+	roleController := http.NewRoleController(roleUseCase, config.Log)
 
 	// setup middleware
 	authMiddleware := middleware.NewAuth(userUseCase)
@@ -46,6 +49,7 @@ func Bootstrap(config *BootstrapConfig) {
 		UserController:    userController,
 		ContactController: contactController,
 		AddressController: addressController,
+		RoleController:    roleController,
 		AuthMiddleware:    authMiddleware,
 	}
 	routeConfig.Setup()

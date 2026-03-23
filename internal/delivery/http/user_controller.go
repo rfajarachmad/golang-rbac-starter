@@ -99,3 +99,77 @@ func (c *UserController) Update(ctx *fiber.Ctx) error {
 
 	return ctx.JSON(model.WebResponse[*model.UserResponse]{Data: response})
 }
+
+// Admin operations
+
+func (c *UserController) ListAll(ctx *fiber.Ctx) error {
+	request := &model.ListUsersRequest{
+		Page: ctx.QueryInt("page", 1),
+		Size: ctx.QueryInt("size", 10),
+	}
+
+	responses, paging, err := c.UseCase.ListAll(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Warnf("Failed to list users")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[[]model.UserResponse]{Data: responses, Paging: paging})
+}
+
+func (c *UserController) GetAny(ctx *fiber.Ctx) error {
+	userId, err := ctx.ParamsInt("userId")
+	if err != nil {
+		c.Log.Warnf("Invalid user id : %+v", err)
+		return fiber.ErrBadRequest
+	}
+
+	request := &model.GetAnyUserRequest{ID: userId}
+	response, err := c.UseCase.GetAny(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Warnf("Failed to get user")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.UserResponse]{Data: response})
+}
+
+func (c *UserController) AssignRole(ctx *fiber.Ctx) error {
+	userId, err := ctx.ParamsInt("userId")
+	if err != nil {
+		c.Log.Warnf("Invalid user id : %+v", err)
+		return fiber.ErrBadRequest
+	}
+
+	request := new(model.AssignRoleRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		c.Log.Warnf("Failed to parse request body : %+v", err)
+		return fiber.ErrBadRequest
+	}
+
+	request.UserID = userId
+	response, err := c.UseCase.AssignRole(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Warnf("Failed to assign role")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.UserResponse]{Data: response})
+}
+
+func (c *UserController) DeleteAny(ctx *fiber.Ctx) error {
+	userId, err := ctx.ParamsInt("userId")
+	if err != nil {
+		c.Log.Warnf("Invalid user id : %+v", err)
+		return fiber.ErrBadRequest
+	}
+
+	request := &model.DeleteAnyUserRequest{ID: userId}
+	response, err := c.UseCase.DeleteAny(ctx.UserContext(), request)
+	if err != nil {
+		c.Log.WithError(err).Warnf("Failed to delete user")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[bool]{Data: response})
+}

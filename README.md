@@ -1,6 +1,6 @@
 # Go RBAC Starter
 
-A RESTful API built with Go following Clean Architecture principles. Features user authentication with token-based auth, contact management, and address management with scoped data ownership.
+A RESTful API built with Go following Clean Architecture principles. Features role-based access control (RBAC) with token-based auth, contact management, and address management with scoped data ownership.
 
 ## Tech Stack
 
@@ -25,7 +25,7 @@ Entity → Repository → UseCase → Controller → Route
 | UseCase | `internal/usecase/` | Business logic, transactions, validation |
 | Controller | `internal/delivery/http/` | HTTP handlers (Fiber) |
 | Route | `internal/delivery/http/route/` | Route registration (guest & auth) |
-| Middleware | `internal/delivery/http/middleware/` | Token-based auth middleware |
+| Middleware | `internal/delivery/http/middleware/` | Auth + RBAC permission middleware |
 | Model | `internal/model/` | Request/response DTOs with validation tags |
 | Config | `internal/config/` | Infrastructure init & DI wiring via `Bootstrap()` |
 
@@ -77,6 +77,27 @@ Entity → Repository → UseCase → Controller → Route
 
 The server starts on `http://localhost:8080`.
 
+A default admin user is seeded by the migration:
+- Email: `admin@example.com`
+- Password: `admin123`
+
+## Authorization (RBAC)
+
+The system enforces two layers of access control:
+
+1. **Permission-based access** — Each route is protected by `RequirePermission()` middleware that checks the user's role permissions
+2. **Data ownership scoping** — Users can only access their own contacts and addresses (enforced at the repository level)
+
+### Roles
+
+| Role | Description | Permissions |
+|------|-------------|-------------|
+| `admin` | Full system access | All 16 permissions including admin endpoints |
+| `user` | Standard user | CRUD on own data (11 permissions) |
+| `viewer` | Read-only access | Read own profile, contacts, addresses (3 permissions) |
+
+New registrations default to the `user` role. Admins can assign roles via `PATCH /api/admin/users/:userId/role`.
+
 ## API Endpoints
 
 Full OpenAPI 3.0.3 spec available at `api/api-spec.json`.
@@ -88,31 +109,47 @@ Full OpenAPI 3.0.3 spec available at `api/api-spec.json`.
 | POST | `/api/users` | Register new user |
 | POST | `/api/users/_login` | Login (returns token) |
 
-### Authenticated Routes
+### Authenticated Routes (user + admin)
 
-All require `Authorization: <token>` header.
+All require `Authorization: <token>` header. Permission required shown in parentheses.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/users/_current` | Get current user profile |
-| PATCH | `/api/users/_current` | Update current user |
-| DELETE | `/api/users` | Logout |
-| POST | `/api/contacts` | Create contact |
-| GET | `/api/contacts/:contactId` | Get contact |
-| PUT | `/api/contacts/:contactId` | Update contact |
-| DELETE | `/api/contacts/:contactId` | Delete contact |
-| GET | `/api/contacts` | Search contacts (with pagination) |
-| POST | `/api/contacts/:contactId/addresses` | Create address |
-| GET | `/api/contacts/:contactId/addresses` | List addresses |
-| GET | `/api/contacts/:contactId/addresses/:addressId` | Get address |
-| PUT | `/api/contacts/:contactId/addresses/:addressId` | Update address |
-| DELETE | `/api/contacts/:contactId/addresses/:addressId` | Delete address |
+| Method | Endpoint | Description | Permission |
+|--------|----------|-------------|------------|
+| GET | `/api/users/_current` | Get current user profile | `user:read` |
+| PATCH | `/api/users/_current` | Update current user | `user:update` |
+| DELETE | `/api/users` | Logout | `user:delete` |
+| POST | `/api/contacts` | Create contact | `contact:create` |
+| GET | `/api/contacts/:contactId` | Get contact | `contact:read` |
+| PUT | `/api/contacts/:contactId` | Update contact | `contact:update` |
+| DELETE | `/api/contacts/:contactId` | Delete contact | `contact:delete` |
+| GET | `/api/contacts` | Search contacts (with pagination) | `contact:read` |
+| POST | `/api/contacts/:contactId/addresses` | Create address | `address:create` |
+| GET | `/api/contacts/:contactId/addresses` | List addresses | `address:read` |
+| GET | `/api/contacts/:contactId/addresses/:addressId` | Get address | `address:read` |
+| PUT | `/api/contacts/:contactId/addresses/:addressId` | Update address | `address:update` |
+| DELETE | `/api/contacts/:contactId/addresses/:addressId` | Delete address | `address:delete` |
+
+### Admin Routes
+
+Require `admin` role.
+
+| Method | Endpoint | Description | Permission |
+|--------|----------|-------------|------------|
+| GET | `/api/admin/users` | List all users (paginated) | `admin:user:list` |
+| GET | `/api/admin/users/:userId` | Get any user | `admin:user:read` |
+| PATCH | `/api/admin/users/:userId/role` | Assign role to user | `admin:user:update` |
+| DELETE | `/api/admin/users/:userId` | Delete any user | `admin:user:delete` |
+| GET | `/api/admin/roles` | List all roles | `admin:role:manage` |
+| GET | `/api/admin/roles/:roleId` | Get role with permissions | `admin:role:manage` |
 
 ## Database
 
-Three tables managed via sequential migrations in `db/migrations/`:
+Six tables managed via sequential migrations in `db/migrations/`:
 
-- **users** — serial PK, email/password/token auth
+- **users** — serial PK, email/password/token auth, FK to roles
+- **roles** — serial PK, name (admin/user/viewer)
+- **permissions** — serial PK, name (e.g., `contact:create`)
+- **role_permissions** — join table (role_id, permission_id)
 - **contacts** — UUID PK, belongs to user
 - **addresses** — UUID PK, belongs to contact
 
